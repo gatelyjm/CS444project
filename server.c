@@ -153,6 +153,13 @@ bool process_message(int session_id, const char message[]) {
     token = strtok(data, " ");
     result_idx = token[0] - 'a';
 
+    if(strlen(token) > 1 || result_idx < 0 || result_idx > 25)
+    {
+      //variable is not a single character
+      //or character is not a lower case letter
+      return false;
+    }
+
     // Processes "=".
     token = strtok(NULL, " ");
 
@@ -328,6 +335,7 @@ void browser_handler(int browser_socket_fd) {
         bool data_valid = process_message(session_id, message);
         if (!data_valid) {
             // TODO: For Part 3.1, add code here to send the error message to the browser.
+            broadcast(session_id, "Invalid Input!");
             continue;
         }
 

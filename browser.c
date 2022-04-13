@@ -103,7 +103,6 @@ void server_listener() {
     receive_message(server_socket_fd, message);
 
     // TODO: For Part 3.1, add code here to print the error message.
-
     puts(message);
 
     //}
@@ -112,7 +111,7 @@ void server_listener() {
 /**
  * Starts the browser. Sets up the connection, start the listener thread,
  * and keeps a loop to read in the user's input and send it out.
- * 
+ *
  * @param host_ip the host ip to connect
  * @param port the host port to connect
  */
