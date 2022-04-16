@@ -12,6 +12,8 @@
 
 #define COOKIE_PATH "./browser.cookie"
 
+#define ERROR_MSG_LEN 5
+
 static bool browser_on = true;  // Determines if the browser is on/off.
 static int server_socket_fd;    // The socket file descriptor of the server that is currently being connected.
 static int session_id;          // The session ID of the session on the server that is currently being accessed.
@@ -103,7 +105,13 @@ void server_listener() {
     receive_message(server_socket_fd, message);
 
     // TODO: For Part 3.1, add code here to print the error message.
-    puts(message);
+    char error_msg[] = "ERROR";
+    if(strlen(message) == ERROR_MSG_LEN && memcmp(message, error_msg, ERROR_MSG_LEN) == 0) {
+      puts("Invalid Input!");
+    }
+    else {
+      puts(message);
+    }
 
     //}
 }
