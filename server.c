@@ -171,7 +171,11 @@ bool process_message(int session_id, const char message[]) {
 
     // Processes the first variable/value.
     token = strtok(NULL, " ");
-    if (is_str_numeric(token)) {
+    if(token == NULL){
+      //missing variables/values
+      return false;
+    }
+    else if (is_str_numeric(token)) {
         first_value = strtod(token, NULL);
     } else {
         int first_idx = token[0] - 'a';
