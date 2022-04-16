@@ -151,6 +151,11 @@ bool process_message(int session_id, const char message[]) {
 
     // Processes the result variable.
     token = strtok(data, " ");
+    if(strlen(token) <= 0)
+    {
+      //no entry
+      return false;
+    }
     result_idx = token[0] - 'a';
 
     if(strlen(token) > 1 || result_idx < 0 || result_idx > 25)
@@ -163,7 +168,7 @@ bool process_message(int session_id, const char message[]) {
     // Processes "=".
     token = strtok(NULL, " ");
 
-    if(strlen(token) > 1 || *token != '=')
+    if(token == NULL || strlen(token) > 1 || *token != '=')
     {
       //character must be exactly one = sign
       return false;
