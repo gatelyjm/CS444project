@@ -163,6 +163,12 @@ bool process_message(int session_id, const char message[]) {
     // Processes "=".
     token = strtok(NULL, " ");
 
+    if(strlen(token) > 1 || *token != '=')
+    {
+      //character must be exactly one = sign
+      return false;
+    }
+
     // Processes the first variable/value.
     token = strtok(NULL, " ");
     if (is_str_numeric(token)) {
