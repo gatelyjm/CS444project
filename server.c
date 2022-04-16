@@ -200,19 +200,40 @@ bool process_message(int session_id, const char message[]) {
         session_list[session_id].values[result_idx] = first_value;
         return true;
     }
-    symbol = token[0];
+    else if(strlen(token) > 1) {
+      //operator must be one character
+      return false;
+    }
+    else {
+      symbol = token[0];
+    }
 
     // Processes the second variable/value.
     token = strtok(NULL, " ");
-    if (is_str_numeric(token)) {
+    if(token == NULL) {
+      //missing last value
+      return false;
+    }
+    else if (is_str_numeric(token)) {
         second_value = strtod(token, NULL);
     } else {
         int second_idx = token[0] - 'a';
+        if(strlen(token) > 1 || second_idx < 0 || second_idx > 25)
+        {
+          //variable is not a single character
+          //or character is not a lower case letter
+          return false;
+        }
         second_value = session_list[session_id].values[second_idx];
     }
 
     // No data should be left over thereafter.
     token = strtok(NULL, " ");
+    if(token != NULL)
+    {
+      //extra data
+      return false;
+    }
 
     session_list[session_id].variables[result_idx] = true;
 
@@ -224,6 +245,9 @@ bool process_message(int session_id, const char message[]) {
         session_list[session_id].values[result_idx] = first_value * second_value;
     } else if (symbol == '/') {
         session_list[session_id].values[result_idx] = first_value / second_value;
+    } else {
+      //invalid operation
+      return false;
     }
 
     return true;
