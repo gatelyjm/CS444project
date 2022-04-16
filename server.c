@@ -175,6 +175,12 @@ bool process_message(int session_id, const char message[]) {
         first_value = strtod(token, NULL);
     } else {
         int first_idx = token[0] - 'a';
+        if(strlen(token) > 1 || first_idx < 0 || first_idx > 25)
+        {
+          //variable is not a single character
+          //or character is not a lower case letter
+          return false;
+        }
         first_value = session_list[session_id].values[first_idx];
     }
 
