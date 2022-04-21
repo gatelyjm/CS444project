@@ -215,10 +215,13 @@ bool process_message(int session_id, const char message[]) {
  */
 void broadcast(int session_id, const char message[]) {
     for (int i = 0; i < NUM_BROWSER; ++i) {
+
         pthread_mutex_lock(&browser_list_mutex);
+
         if (browser_list[i].in_use && browser_list[i].session_id == session_id) {
             send_message(browser_list[i].socket_fd, message);
         }
+
         pthread_mutex_unlock(&browser_list_mutex);
     }
 }
@@ -267,7 +270,9 @@ int register_browser(int browser_socket_fd) {
     //  code around the critical sections identified.
 
     for (int i = 0; i < NUM_BROWSER; ++i) {
+
         pthread_mutex_lock(&browser_list_mutex);
+
         if (!browser_list[i].in_use) {
 
             browser_id = i;
@@ -276,6 +281,7 @@ int register_browser(int browser_socket_fd) {
             pthread_mutex_unlock(&browser_list_mutex);
             break;
         }
+
         pthread_mutex_unlock(&browser_list_mutex);
     }
 
@@ -358,11 +364,10 @@ void *browser_handler(void *argument){
 
         session_to_str(session_id, response);
         broadcast(session_id, response);
-
         save_session(session_id);
     }
 
-    pthread_exit(0);
+    //pthread_exit(0);
 }
 
 /**
