@@ -27,17 +27,39 @@ typedef struct browser_struct {
 } browser_t;
 
 typedef struct session_struct {
-    bool in_use;
     bool variables[NUM_VARIABLES];
     double values[NUM_VARIABLES];
 } session_t;
 
+typedef struct node {
+  int key;
+  session_t* session;
+  struct node* next;
+} node_t;
+
+typedef struct head {
+  int size;
+  node_t* list;
+} head_t;
+
 static browser_t browser_list[NUM_BROWSER];                             // Stores the information of all browsers.
 // TODO: For Part 3.2, convert the session_list to a simple hashmap/dictionary.
-static session_t session_list[NUM_SESSIONS];   // Stores the information of all sessions.
-
+//static session_t session_list[NUM_SESSIONS];                            // Stores the information of all sessions.
+static head_t session_list;
 static pthread_mutex_t browser_list_mutex = PTHREAD_MUTEX_INITIALIZER;  // A mutex lock for the browser list.
 static pthread_mutex_t session_list_mutex = PTHREAD_MUTEX_INITIALIZER;  // A mutex lock for the session list.
+
+//Inserts an element to the list found at head
+//Returns false if insert was not completed
+bool map_insert(head_t* list_head, const int key);
+
+//Returns bool informing if session was found at key
+//Stores the session if found in session
+bool map_find(const head_t* list_head, const int key, session_t** session);
+
+//Deletes element in list at key
+//Returns true if deletion was performed
+bool map_delete(head_t* list_head, const int key);
 
 // Returns the string format of the given session.
 // There will be always 9 digits in the output string.
@@ -81,6 +103,111 @@ void *browser_handler(void *argument);
 void start_server(int port);
 
 /**
+ * Returns bool indicating successful insertion of element
+ * Assumes user has already verified that ID is not in list already
+ *
+ * @param list_head head of the list of session_struct
+ * @param key to be inserted in list
+ */
+bool map_insert(head_t* list_head, const int key)
+{
+  session_t* session_ptr;
+
+  if(list_head->size >= NUM_SESSIONS)
+  {
+    //If there are already enough sessions, do not insert
+    return false;
+  }
+
+  if(list_head->list == NULL)
+  {
+    node_t* new_list = malloc(sizeof(node_t));
+    new_list->key = key;
+    new_list->next = NULL;
+    session_ptr = malloc(sizeof(session_t));
+    new_list->session = session_ptr;
+    list_head->list = new_list;
+    (list_head->size)++;
+    return true;
+  }
+  node_t* element = list_head->list;
+  while((element->next) != NULL)
+  {
+    element = element->next;
+  }
+
+  node_t* new_node = malloc(sizeof(node_t));
+  new_node->key = key;
+  new_node->next = NULL;
+  session_ptr = malloc(sizeof(session_t));
+  new_node->session = session_ptr;
+
+
+  element->next = new_node;
+  (list_head->size)++;
+  return true;
+}
+
+/**
+ * Returns bool indicating successful finding of element
+ * Stores found session in param session
+ *
+ * @param list_head head of the list of session_struct
+ * @param key of element to be found
+ * @param session to store the session_t if found
+ */
+bool map_find(const head_t* list_head, const int key, session_t** session)
+{
+  node_t* element = list_head->list;
+  while(element != NULL)
+  {
+    if(element->key == key)
+    {
+      *session = element->session;
+      return true;
+    }
+    element = element->next;
+  }
+  return false;
+}
+
+/**
+ * Returns bool indicating successful deletion of element
+ *
+ * @param list_head head of the list of session_struct
+ * @param key to be deleted in list
+ */
+bool map_delete(head_t* list_head, const int key)
+{
+  node_t* element = list_head->list;
+  if(element->key == key)
+  {
+    list_head->list = element->next;
+    (list_head->size)--;
+    free(element->session);
+    free(element);
+    return true;
+  }
+
+  node_t* deletion;
+  while(element->next != NULL)
+  {
+    if(element->next->key == key)
+    {
+      deletion = element->next;
+      element->next = element->next->next;
+      free(deletion->session);
+      free(deletion);
+      (list_head->size)--;
+      return true;
+    }
+    element = element->next;
+  }
+
+  return false;
+}
+
+/**
  * Returns the string format of the given session.
  * There will be always 9 digits in the output string.
  *
@@ -90,16 +217,17 @@ void start_server(int port);
  */
 void session_to_str(int session_id, char result[]) {
     memset(result, 0, BUFFER_LEN);
-    session_t session = session_list[session_id];
+    session_t* session;
+    map_find(&session_list, session_id, &session);
 
     for (int i = 0; i < NUM_VARIABLES; ++i) {
-        if (session.variables[i]) {
+        if (session->variables[i]) {
             char line[32];
 
-            if (session.values[i] < 1000) {
-                sprintf(line, "%c = %.6f\n", 'a' + i, session.values[i]);
+            if (session->values[i] < 1000) {
+                sprintf(line, "%c = %.6f\n", 'a' + i, session->values[i]);
             } else {
-                sprintf(line, "%c = %.8e\n", 'a' + i, session.values[i]);
+                sprintf(line, "%c = %.8e\n", 'a' + i, session->values[i]);
             }
 
             strcat(result, line);
@@ -146,6 +274,7 @@ bool process_message(int session_id, const char message[]) {
     double first_value;
     char symbol;
     double second_value;
+    session_t* session;
 
     // TODO: For Part 3.1, write code to determine if the input is invalid and return false if it is.
     // Hint: Also need to check if the given variable does exist (i.e., it has been assigned with some value)
@@ -154,54 +283,110 @@ bool process_message(int session_id, const char message[]) {
     // Makes a copy of the string since strtok() will modify the string that it is processing.
     char data[BUFFER_LEN];
     strcpy(data, message);
+    map_find(&session_list, session_id, &session);
 
     // Processes the result variable.
     token = strtok(data, " ");
+    if(strlen(token) <= 0)
+    {
+      //no entry
+      return false;
+    }
     result_idx = token[0] - 'a';
+
+    if(strlen(token) > 1 || result_idx < 0 || result_idx > 25)
+    {
+      //variable is not a single character
+      //or character is not a lower case letter
+      return false;
+    }
+
 
     // Processes "=".
     token = strtok(NULL, " ");
 
+    if(token == NULL || strlen(token) > 1 || *token != '=')
+    {
+      //character must be exactly one = sign
+      return false;
+    }
+
     // Processes the first variable/value.
     token = strtok(NULL, " ");
-    if (is_str_numeric(token)) {
+    if(token == NULL){
+      //missing variables/values
+      return false;
+    }
+    else if (is_str_numeric(token)) {
         first_value = strtod(token, NULL);
     } else {
         int first_idx = token[0] - 'a';
-        first_value = session_list[session_id].values[first_idx];
+        if(strlen(token) > 1 || first_idx < 0 || first_idx > 25 || !(session->variables[first_idx]))
+        {
+          //variable is not a single character
+          //or character is not a lower case letter
+          //or variable is not in use yet
+          return false;
+        }
+        first_value = session->values[first_idx];
     }
 
     // Processes the operation symbol.
     token = strtok(NULL, " ");
     if (token == NULL) {
-        session_list[session_id].variables[result_idx] = true;
-        session_list[session_id].values[result_idx] = first_value;
+        session->variables[result_idx] = true;
+        session->values[result_idx] = first_value;
         return true;
     }
-    symbol = token[0];
+    else if(strlen(token) > 1) {
+      //operator must be one character
+      return false;
+    }
+    else {
+      symbol = token[0];
+    }
 
     // Processes the second variable/value.
     token = strtok(NULL, " ");
-    if (is_str_numeric(token)) {
+    if(token == NULL) {
+      //missing last value
+      return false;
+    }
+    else if (is_str_numeric(token)) {
         second_value = strtod(token, NULL);
     } else {
         int second_idx = token[0] - 'a';
-        second_value = session_list[session_id].values[second_idx];
+        if(strlen(token) > 1 || second_idx < 0 || second_idx > 25 || !(session->variables[second_idx]))
+        {
+          //variable is not a single character
+          //or character is not a lower case letter
+          //or variable is not in use yet
+          return false;
+        }
+        second_value = session->values[second_idx];
     }
 
     // No data should be left over thereafter.
     token = strtok(NULL, " ");
+    if(token != NULL)
+    {
+      //extra data
+      return false;
+    }
 
-    session_list[session_id].variables[result_idx] = true;
+    session->variables[result_idx] = true;
 
     if (symbol == '+') {
-        session_list[session_id].values[result_idx] = first_value + second_value;
+        session->values[result_idx] = first_value + second_value;
     } else if (symbol == '-') {
-        session_list[session_id].values[result_idx] = first_value - second_value;
+        session->values[result_idx] = first_value - second_value;
     } else if (symbol == '*') {
-        session_list[session_id].values[result_idx] = first_value * second_value;
+        session->values[result_idx] = first_value * second_value;
     } else if (symbol == '/') {
-        session_list[session_id].values[result_idx] = first_value / second_value;
+        session->values[result_idx] = first_value / second_value;
+    } else {
+      //invalid operation
+      return false;
     }
 
     return true;
@@ -240,6 +425,23 @@ void get_session_file_path(int session_id, char path[]) {
  * Loads every session from the disk one by one if it exists.
  */
 void load_all_sessions() {
+    session_t* session;
+    for(int i = 0; i < NUM_SESSIONS; i++)
+    {
+      char path[128];
+      get_session_file_path(i, path);
+
+      FILE *fin = fopen(path, "r");
+      if(fin == NULL)
+      {
+        continue;
+      }
+
+      map_insert(&session_list, i);
+      map_find(&session_list, i, &session);
+      fread(session, sizeof(session_t), 1, fin);
+      fclose(fin);
+    }
     // TODO: For Part 1.1, write your file operation code here.
     // Hint: Use get_session_file_path() to get the file path for each session.
     //       Don't forget to load all of sessions on the disk.
@@ -251,6 +453,13 @@ void load_all_sessions() {
  * @param session_id the session ID
  */
 void save_session(int session_id) {
+    char path[128];
+    session_t* session;
+    map_find(&session_list, session_id, &session);
+    get_session_file_path(session_id, path);
+    FILE *fin=fopen(path,"w");
+    fwrite(session,sizeof(session_t),1, fin);
+    fclose(fin);
     // TODO: For Part 1.1, write your file operation code here.
     // Hint: Use get_session_file_path() to get the file path for each session.
 }
@@ -264,6 +473,8 @@ void save_session(int session_id) {
  */
 int register_browser(int browser_socket_fd) {
     int browser_id;
+    session_t* session;
+
 
     // TODO: For Part 2.2, identify the critical sections where different threads may read from/write to
     //  the same shared static array browser_list and session_list. Place the lock and unlock
@@ -289,13 +500,14 @@ int register_browser(int browser_socket_fd) {
     receive_message(browser_socket_fd, message);
 
     int session_id = strtol(message, NULL, 10);
-    if (session_id == -1) {
-        pthread_mutex_lock(&session_list_mutex);
-        for (int i = 0; i < NUM_SESSIONS; ++i) {
-            if (!session_list[i].in_use) {
-                session_id = i;
-                session_list[session_id].in_use = true;
-                pthread_mutex_unlock(&session_list_mutex);
+    if (session_id == -1)
+    {
+        while(true)
+        {
+            session_id = rand() % NUM_SESSIONS; //Generates a random number from 0 to NUM_SESSIONS - 1
+            if (!map_find(&session_list, session_id, &session))
+            {
+                map_insert(&session_list, session_id);
                 break;
             }
         }
@@ -355,14 +567,15 @@ void *browser_handler(void *argument){
         if (message[0] == '\0') {
             continue;
         }
-
         bool data_valid = process_message(session_id, message);
         if (!data_valid) {
             // TODO: For Part 3.1, add code here to send the error message to the browser.
+            broadcast(session_id, "ERROR");
             continue;
         }
 
         session_to_str(session_id, response);
+        printf("finished session_to_str\nresponse: %s\n", response);
         broadcast(session_id, response);
         save_session(session_id);
     }

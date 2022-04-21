@@ -14,6 +14,8 @@
 
 #define COOKIE_PATH "./browser.cookie"
 
+#define ERROR_MSG_LEN 5
+
 static bool browser_on = true;  // Determines if the browser is on/off.
 static int server_socket_fd;    // The socket file descriptor of the server that is currently being connected.
 static int session_id;          // The session ID of the session on the server that is currently being accessed.
@@ -68,15 +70,28 @@ void read_user_input(char message[]) {
  * Otherwise, assigns the session ID to be -1.
  */
 void load_cookie() {
+    
+    FILE *fin=fopen(COOKIE_PATH,"rb");
+    if(fin==NULL){
+         session_id=-1;
+         return;
+    }
+    fread(&session_id, sizeof(int),1,fin);
+    fclose(fin);
+
     // TODO: For Part 1.2, write your file operation code here.
     // Hint: The file path of the cookie is stored in COOKIE_PATH.
-    session_id = -1; // You may move this line to anywhere inside this fucntion.
+    //session_id = -1; // You may move this line to anywhere inside this fucntion.
 }
 
 /**
  * Saves the session ID to the cookie on the disk.
  */
 void save_cookie() {
+    
+    FILE *fin=fopen(COOKIE_PATH,"w");
+    fwrite(&session_id, sizeof(int),1,fin);
+    fclose(fin);
     // TODO: For Part 1.2, write your file operation code here.
     // Hint: The file path of the cookie is stored in COOKIE_PATH.
 }
@@ -109,8 +124,13 @@ void *server_listener() {
 
         // TODO: For Part 3.1, add code here to print the error message.
 
-        puts(message);
-
+    // TODO: For Part 3.1, add code here to print the error message.
+    char error_msg[] = "ERROR";
+    if(strlen(message) == ERROR_MSG_LEN && memcmp(message, error_msg, ERROR_MSG_LEN) == 0) {
+      puts("Invalid Input!");
+    }
+    else {
+      puts(message);
     }
 
     pthread_exit(0);
@@ -119,7 +139,7 @@ void *server_listener() {
 /**
  * Starts the browser. Sets up the connection, start the listener thread,
  * and keeps a loop to read in the user's input and send it out.
- * 
+ *
  * @param host_ip the host ip to connect
  * @param port the host port to connect
  */
