@@ -65,15 +65,28 @@ void read_user_input(char message[]) {
  * Otherwise, assigns the session ID to be -1.
  */
 void load_cookie() {
+    
+    FILE *fin=fopen(COOKIE_PATH,"rb");
+    if(fin==NULL){
+         session_id=-1;
+         return;
+    }
+    fread(&session_id, sizeof(int),1,fin);
+    fclose(fin);
+
     // TODO: For Part 1.2, write your file operation code here.
     // Hint: The file path of the cookie is stored in COOKIE_PATH.
-    session_id = -1; // You may move this line to anywhere inside this fucntion.
+    //session_id = -1; // You may move this line to anywhere inside this fucntion.
 }
 
 /**
  * Saves the session ID to the cookie on the disk.
  */
 void save_cookie() {
+    
+    FILE *fin=fopen(COOKIE_PATH,"w");
+    fwrite(&session_id, sizeof(int),1,fin);
+    fclose(fin);
     // TODO: For Part 1.2, write your file operation code here.
     // Hint: The file path of the cookie is stored in COOKIE_PATH.
 }
