@@ -278,7 +278,6 @@ bool process_message(int session_id, const char message[]) {
     // Makes a copy of the string since strtok() will modify the string that it is processing.
     char data[BUFFER_LEN];
     strcpy(data, message);
-
     map_find(&session_list, session_id, &session);
 
     // Processes the result variable.
@@ -296,6 +295,7 @@ bool process_message(int session_id, const char message[]) {
       //or character is not a lower case letter
       return false;
     }
+
 
     // Processes "=".
     token = strtok(NULL, " ");
@@ -415,19 +415,23 @@ void get_session_file_path(int session_id, char path[]) {
  * Loads every session from the disk one by one if it exists.
  */
 void load_all_sessions() {
-    for(int i=0; i<NUM_SESSIONS; ++i){
-        char path[128];
-        get_session_file_path(i, path);
+    session_t* session;
+    for(int i = 0; i < NUM_SESSIONS; i++)
+    {
+      char path[128];
+      get_session_file_path(i, path);
 
-        FILE *fin=fopen(path,"r");
-        if (fin==NULL){
-            continue;
-        }
-        fread(&session_list[i],sizeof(session_t),1, fin);
-        fclose(fin);
-        
+      FILE *fin = fopen(path, "r");
+      if(fin == NULL)
+      {
+        continue;
+      }
+
+      map_insert(&session_list, i);
+      map_find(&session_list, i, &session);
+      fread(session, sizeof(session_t), 1, fin);
+      fclose(fin);
     }
-    
     // TODO: For Part 1.1, write your file operation code here.
     // Hint: Use get_session_file_path() to get the file path for each session.
     //       Don't forget to load all of sessions on the disk.
@@ -439,11 +443,12 @@ void load_all_sessions() {
  * @param session_id the session ID
  */
 void save_session(int session_id) {
-    
     char path[128];
+    session_t* session;
+    map_find(&session_list, session_id, &session);
     get_session_file_path(session_id, path);
     FILE *fin=fopen(path,"w");
-    fwrite(&session_list[session_id],sizeof(session_t),1, fin);
+    fwrite(session,sizeof(session_t),1, fin);
     fclose(fin);
     // TODO: For Part 1.1, write your file operation code here.
     // Hint: Use get_session_file_path() to get the file path for each session.
@@ -482,7 +487,7 @@ int register_browser(int browser_socket_fd) {
     {
         while(true)
         {
-            session_id = rand() % 10000; //Generates a random number from 0 to 99999
+            session_id = rand() % NUM_SESSIONS; //Generates a random number from 0 to NUM_SESSIONS - 1
             if (!map_find(&session_list, session_id, &session))
             {
                 map_insert(&session_list, session_id);
@@ -534,7 +539,6 @@ void browser_handler(int browser_socket_fd) {
         if (message[0] == '\0') {
             continue;
         }
-
         bool data_valid = process_message(session_id, message);
         if (!data_valid) {
             // TODO: For Part 3.1, add code here to send the error message to the browser.
