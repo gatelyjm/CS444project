@@ -367,7 +367,7 @@ void *browser_handler(void *argument){
         save_session(session_id);
     }
 
-    //pthread_exit(0);
+    pthread_exit(0);
 }
 
 /**
