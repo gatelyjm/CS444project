@@ -70,7 +70,7 @@ void read_user_input(char message[]) {
  * Otherwise, assigns the session ID to be -1.
  */
 void load_cookie() {
-    
+
     FILE *fin=fopen(COOKIE_PATH,"rb");
     if(fin==NULL){
          session_id=-1;
@@ -88,7 +88,7 @@ void load_cookie() {
  * Saves the session ID to the cookie on the disk.
  */
 void save_cookie() {
-    
+
     FILE *fin=fopen(COOKIE_PATH,"w");
     fwrite(&session_id, sizeof(int),1,fin);
     fclose(fin);
@@ -124,14 +124,15 @@ void *server_listener() {
 
         // TODO: For Part 3.1, add code here to print the error message.
 
-    // TODO: For Part 3.1, add code here to print the error message.
-    char error_msg[] = "ERROR";
-    if(strlen(message) == ERROR_MSG_LEN && memcmp(message, error_msg, ERROR_MSG_LEN) == 0) {
-      puts("Invalid Input!");
-    }
-    else {
-      puts(message);
-    }
+        // TODO: For Part 3.1, add code here to print the error message.
+        char error_msg[] = "ERROR";
+        if(strlen(message) == ERROR_MSG_LEN && memcmp(message, error_msg, ERROR_MSG_LEN) == 0) {
+          puts("Invalid Input!");
+        }
+        else {
+          puts(message);
+        }
+  }
 
     pthread_exit(0);
 }
@@ -174,7 +175,7 @@ void start_browser(const char host_ip[], int port) {
     save_cookie();
 
     pthread_t thread_id;
-    assert(pthread_create(&thread_id, NULL, server_listener, NULL) == 0);   
+    assert(pthread_create(&thread_id, NULL, server_listener, NULL) == 0);
 
     // Main loop to read in the user's input and send it out.
     while (browser_on) {
