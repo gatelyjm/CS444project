@@ -532,7 +532,7 @@ int register_browser(int browser_socket_fd) {
 
 void *browser_handler(void *argument){
 
-    
+
     int browser_id;
     int browser_socket_fd = (int)(size_t)argument;
 
@@ -551,7 +551,7 @@ void *browser_handler(void *argument){
         printf("Received message from Browser #%d for Session #%d: %s\n", browser_id, session_id, message);
 
         if ((strcmp(message, "EXIT") == 0) || (strcmp(message, "exit") == 0)) {
-            
+
             close(socket_fd);
 
             pthread_mutex_lock(&browser_list_mutex);
@@ -575,7 +575,6 @@ void *browser_handler(void *argument){
         }
 
         session_to_str(session_id, response);
-        printf("finished session_to_str\nresponse: %s\n", response);
         broadcast(session_id, response);
         save_session(session_id);
     }
@@ -633,7 +632,7 @@ void start_server(int port) {
         //browser_handler(browser_socket_fd);
         pthread_t thread_id;
         assert(pthread_create(&thread_id, NULL, browser_handler, (void *) (size_t) browser_socket_fd) == 0);
-    }    
+    }
 
 
     // Closes the socket.
